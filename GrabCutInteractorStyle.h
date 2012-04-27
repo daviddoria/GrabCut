@@ -3,7 +3,7 @@
 
 #include <vtkInteractorStyleImage.h>
 #include <vtkSmartPointer.h>
-#include "vtkMemberFunctionCommand.h"
+//#include "vtkMemberFunctionCommand.h"
 
 class vtkRenderer;
 class vtkImageActor;
@@ -25,19 +25,9 @@ public:
 
   void OnKeyPress();
 
-  void SetLeftRenderer(vtkSmartPointer<vtkRenderer> renderer)
-    {this->LeftRenderer = renderer;}
-    void SetRightRenderer(vtkSmartPointer<vtkRenderer> renderer)
-    {this->RightRenderer = renderer;}
-  void SetImageActor(vtkSmartPointer<vtkImageActor> actor)
-    {this->ImageActor = actor;}
-  void SetClipFilter(vtkSmartPointer<vtkImageClip> clip)
-    {this->ClipFilter = clip;}
-  void SetInputImage(vtkSmartPointer<vtkImageData> image)
-    {this->InputImage = image;}
   void UpdateCropping(vtkBorderWidget* borderWidget);
 
-
+  bool IsInitialized();
 
 protected:
 
@@ -46,14 +36,16 @@ protected:
   int BACKGROUNDALPHA;
 
   // Functions
+  void Refresh();
   std::vector<vnl_vector<double> > CreateRGBPoints(unsigned char pointType);
   void CreateImageFromModels(vtkExpectationMaximization* emForeground, vtkExpectationMaximization* emBackground); // For sanity only
 
   // Inputs
-  vtkSmartPointer<vtkRenderer>   LeftRenderer;
-  vtkSmartPointer<vtkRenderer>   RightRenderer;
+  vtkSmartPointer<vtkRenderer> LeftRenderer;
+  vtkSmartPointer<vtkRenderer> RightRenderer;
   vtkSmartPointer<vtkImageActor> ImageActor;
-  vtkSmartPointer<vtkImageClip>  ClipFilter;
+  vtkSmartPointer<vtkImageActor> ClippedActor;
+  vtkSmartPointer<vtkImageClip> ClipFilter;
   vtkSmartPointer<vtkImageData> InputImage;
 
   // Internal
@@ -61,7 +53,6 @@ protected:
   vtkSmartPointer<vtkImageData> AlphaMask;
   vtkSmartPointer<vtkBorderWidget> BorderWidget;
 
-  vtkSmartPointer<vtkMemberFunctionCommand<GrabCutInteractorStyle> > Adapter;
   void CatchWidgetEvent(vtkObject* caller, long unsigned int eventId, void* callData);
 
   int NumberOfModels;

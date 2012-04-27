@@ -10,7 +10,7 @@
 #include <vtkInformationVector.h>
 #include <vtkObjectFactory.h>
 
-#include <vtkExpectationMaximization.h>
+#include "ExpectationMaximization/vtkExpectationMaximization.h"
 
 vtkStandardNewMacro(ImageGraphCut);
 
