@@ -31,7 +31,6 @@ ImageGraphCut.cpp
 graph.cpp
 )
 TARGET_LINK_LIBRARIES(GrabCut ${QT_LIBRARIES}
-QVTK
 libKMeansClustering
 libExpectationMaximization
 ${VTK_LIBRARIES}
