@@ -1,6 +1,3 @@
-[submodule "KMeansClustering"]
-	path = KMeansClustering
-	url = ../KMeansClustering.git
 [submodule "ExpectationMaximization"]
 	path = ExpectationMaximization
 	url = ../ExpectationMaximization.git
