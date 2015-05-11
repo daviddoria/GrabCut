@@ -17,22 +17,11 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-FIND_PACKAGE(VTK REQUIRED)
-INCLUDE(${VTK_USE_FILE})
-
-FIND_PACKAGE(VXL REQUIRED)
-INCLUDE(${VXL_CMAKE_DIR}/UseVXL.cmake)
-#INCLUDE(${VXL_USE_FILE})
-
 ADD_EXECUTABLE(GrabCut main.cpp form.h form.cpp
 ${MOCSrcs} ${UISrcs}
-ImageGraphCut.cpp
-
-graph.cpp
 )
+
 TARGET_LINK_LIBRARIES(GrabCut ${QT_LIBRARIES}
 libKMeansClustering
 libExpectationMaximization
-${VTK_LIBRARIES}
-vnl vnl_algo #rrel
 )

@@ -1,3 +1,6 @@
 [submodule "ExpectationMaximization"]
 	path = ExpectationMaximization
 	url = ../ExpectationMaximization.git
+[submodule "ImageGraphCutSegmentation"]
+	path = ImageGraphCutSegmentation
+	url = ../ImageGraphCutSegmentation.git
