@@ -16,7 +16,7 @@ FIND_PACKAGE(ITK REQUIRED ITKCommon ITKIOImageBase ITKIOPNG ITKIOMeta
                           ITKMathematicalMorphology
                           ITKBinaryMathematicalMorphology ITKDistanceMap
                           ITKTestKernel)
-INCLUDE( ${USE_ITK_FILE} )
+INCLUDE( ${ITK_USE_FILE} )
 
 if( "${ITK_VERSION_MAJOR}" LESS 4 )
   MESSAGE(FATAL_ERROR "You must build GrabCut with ITK >= 4.0!")
