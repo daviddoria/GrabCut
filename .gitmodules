@@ -4,3 +4,6 @@
 [submodule "ImageGraphCutSegmentation"]
 	path = ImageGraphCutSegmentation
 	url = ../ImageGraphCutSegmentation.git
+[submodule "CMakeHelpers"]
+	path = CMakeHelpers
+	url = ../CMakeHelpers.git
