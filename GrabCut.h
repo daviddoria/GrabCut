@@ -37,52 +37,54 @@ class GrabCut
 {
 public:
 
-  GrabCut();
+    GrabCut();
 
-  /** The type of a list of pixels/indexes. */
-  typedef std::vector<itk::Index<2> > IndexContainer;
+    /** The type of a list of pixels/indexes. */
+    typedef std::vector<itk::Index<2> > IndexContainer;
 
-  /** Provide the image to segment. */
-  void SetImage(TImage* const image);
+    /** Provide the image to segment. */
+    void SetImage(TImage* const image);
 
-  /** Provide the image to segment. */
-  void SetInitialMask(ForegroundBackgroundSegmentMask* const mask);
+    /** Provide the image to segment. */
+    void SetInitialMask(ForegroundBackgroundSegmentMask* const mask);
 
-  /** Get the image that we are segmenting. */
-  TImage* GetImage();
+    /** Get the image that we are segmenting. */
+    TImage* GetImage();
 
-  /** Do the GrabCut segmentation (The main driver function). */
-  void PerformSegmentation();
+    /** Do the GrabCut segmentation (The main driver function). */
+    void PerformSegmentation();
 
-  /** Do one iteration of the GrabCut algorithm. */
-  void PerformIteration();
+    /** Do one iteration of the GrabCut algorithm. */
+    void PerformIteration();
 
-  /** Get the final segmentation mask. */
-  ForegroundBackgroundSegmentMask* GetSegmentMask();
+    /** Get the current/final segmentation mask. */
+    ForegroundBackgroundSegmentMask* GetSegmentationMask();
 
-  /** Get the resulting segmented image. */
-  TImage* GetResultingForegroundImage();
+    /** Get the resulting segmented image (the foreground pixels, with background pixels zeroed). */
+    TImage* GetSegmentedImage();
 
 protected:
 
-  Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels);
+    // Typedefs
+    typedef typename TImage::PixelType PixelType;
 
-  void Initialize();
+    // Functions
+    Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels);
+    void ClusterPixels(const std::vector<itk::Index<2> >& pixels);
+    void InitialClustering();
 
-  /** The object that will do the segmentation at each iteration. */
-  ImageGraphCut<TImage> GraphCut;
+    // Data
+    /** The object that will do the segmentation at each iteration. */
+    ImageGraphCut<TImage> GraphCut;
 
-  /** The output segmentation. */
-  ForegroundBackgroundSegmentMask::Pointer ResultingSegments;
+    /** The segmentation mask. */
+    ForegroundBackgroundSegmentMask::Pointer SegmentationMask;
 
-  /** The input mask. */
-  ForegroundBackgroundSegmentMask::Pointer InitialMask;
+    /** The input mask. */
+    ForegroundBackgroundSegmentMask::Pointer InitialMask;
 
-  // Typedefs
-  typedef typename TImage::PixelType PixelType;
-
-  /** The image to be segmented. */
-  typename TImage::Pointer Image;
+    /** The image to be segmented. */
+    typename TImage::Pointer Image;
 
 };
 

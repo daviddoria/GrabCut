@@ -73,7 +73,7 @@ int main(int argc, char*argv[])
 
   // Get and write the result
 
-  ImageType::Pointer result = grabCut.GetResultingForegroundImage();
+  ImageType::Pointer result = grabCut.GetSegmentedImage();
   ITKHelpers::WriteImage(result.GetPointer(), outputFilename);
 
 }
