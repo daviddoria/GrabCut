@@ -26,6 +26,10 @@ endif( "${ITK_VERSION_MAJOR}" LESS 4 )
 UseSubmodule(ImageGraphCutSegmentation GrabCut)
 UseSubmodule(ExpectationMaximization GrabCut)
 
+# Make the h/hpp files appear in a QtCreator project
+add_custom_target(GrabCut SOURCES
+GrabCut.h GrabCut.hpp)
+
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 ADD_EXECUTABLE(GrabCutExample GrabCutExample.cpp)
