@@ -28,21 +28,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // STL
 #include <vector>
 
+// Eigen
+#include <Eigen/Dense>
+
 /** Perform GrabCut segmentation on an image.  */
 template <typename TImage>
-class ImageGraphCut
+class GrabCut
 {
 public:
 
-  ImageGraphCut(){}
-
-  /** The type of the histograms. */
-  typedef itk::Statistics::Histogram< float,
-          itk::Statistics::DenseFrequencyContainer2 > HistogramType;
+  GrabCut();
 
   /** The type of a list of pixels/indexes. */
   typedef std::vector<itk::Index<2> > IndexContainer;
-
 
   /** Provide the image to segment. */
   void SetImage(TImage* const image);
@@ -59,10 +57,15 @@ public:
   /** Do one iteration of the GrabCut algorithm. */
   void PerformIteration();
 
-  /** Get the output of the segmentation. */
+  /** Get the final segmentation mask. */
   ForegroundBackgroundSegmentMask* GetSegmentMask();
 
+  /** Get the resulting segmented image. */
+  TImage* GetResultingForegroundImage();
+
 protected:
+
+  Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels);
 
   void Initialize();
 

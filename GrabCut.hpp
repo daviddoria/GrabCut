@@ -36,14 +36,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
 
 template <typename TImage>
-void GrabCut<TImage>::SetImage(TImage* const image)
+GrabCut<TImage>::GrabCut()
 {
   this->Image = TImage::New();
-  ITKHelpers::DeepCopy(image, this->Image.GetPointer());
+  this->InitialMask = ForegroundBackgroundSegmentMask::New();
 }
 
 template <typename TImage>
-void ImageGraphCut<TImage>::Initialize()
+void GrabCut<TImage>::SetImage(TImage* const image)
+{
+  ITKHelpers::DeepCopy(image, this->Image.GetPointer());
+}
+
+
+template <typename TImage>
+void GrabCut<TImage>::SetInitialMask(ForegroundBackgroundSegmentMask* const mask)
+{
+  this->Image = TImage::New();
+  ITKHelpers::DeepCopy(mask, this->InitialMask.GetPointer());
+}
+
+template <typename TImage>
+void GrabCut<TImage>::Initialize()
 {
     std::vector<itk::Index<2> > foregroundPixels =
         ITKHelpers::GetPixelsWithValue(this->InitialMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::FOREGROUND);
@@ -57,7 +71,7 @@ void ImageGraphCut<TImage>::Initialize()
 }
 
 template <typename TImage>
-Eigen::MatrixXd ImageGraphCut<TImage>::CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels)
+Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels)
 {
     // Create the data matrix from the foreground and background pixels
     Eigen::MatrixXd data(3, pixels.size());
@@ -78,7 +92,7 @@ Eigen::MatrixXd ImageGraphCut<TImage>::CreateMatrixFromPixels(const std::vector<
 }
 
 template <typename TImage>
-void ImageGraphCut<TImage>::PerformSegmentation()
+void GrabCut<TImage>::PerformSegmentation()
 {
 
 
@@ -90,62 +104,62 @@ void ImageGraphCut<TImage>::PerformSegmentation()
 }
 
 template <typename TImage>
-void ImageGraphCut<TImage>::PerformIteration()
+void GrabCut<TImage>::PerformIteration()
 {
     int dimensionality = 1;
 
     // Generate some data
-    Eigen::MatrixXd data = GenerateData(1000, dimensionality);
+//    Eigen::MatrixXd data = GenerateData(1000, dimensionality);
 
-    // Initialize the model
-    std::vector<Model*> models(2);
+//    // Initialize the model
+//    std::vector<Model*> models(2);
 
-    for(unsigned int i = 0; i < models.size(); i++)
-    {
-      Model* model = new GaussianModel(dimensionality);
-      models[i] = model;
-    }
+//    for(unsigned int i = 0; i < models.size(); i++)
+//    {
+//      Model* model = new GaussianModel(dimensionality);
+//      models[i] = model;
+//    }
 
-    ExpectationMaximization expectationMaximization;
-    expectationMaximization.SetData(data);
-    expectationMaximization.SetModels(models);
-    expectationMaximization.SetMinChange(1e-5);
-    expectationMaximization.SetMaxIterations(100);
+//    ExpectationMaximization expectationMaximization;
+//    expectationMaximization.SetData(data);
+//    expectationMaximization.SetModels(models);
+//    expectationMaximization.SetMinChange(1e-5);
+//    expectationMaximization.SetMaxIterations(100);
 
-    expectationMaximization.Compute();
+//    expectationMaximization.Compute();
 
-    std::cout << "Final models:" << std::endl;
-    for(unsigned int i = 0; i < expectationMaximization.GetNumberOfModels(); ++i)
-    {
-      expectationMaximization.GetModel(i)->Print();
-    }
+//    std::cout << "Final models:" << std::endl;
+//    for(unsigned int i = 0; i < expectationMaximization.GetNumberOfModels(); ++i)
+//    {
+//      expectationMaximization.GetModel(i)->Print();
+//    }
 }
 
 
 template <typename TImage>
-ForegroundBackgroundSegmentMask* ImageGraphCut<TImage>::GetSegmentMask()
+ForegroundBackgroundSegmentMask* GrabCut<TImage>::GetSegmentMask()
 {
   return this->ResultingSegments;
 }
 
 
 template <typename TImage>
-TImage* ImageGraphCut<TImage>::GetImage()
+TImage* GrabCut<TImage>::GetImage()
 {
   return this->Image;
 }
 
 template <typename TImage>
-TImage* ImageGraphCut<TImage>::GetResultingForegroundImage()
+TImage* GrabCut<TImage>::GetResultingForegroundImage()
 {
     ForegroundBackgroundSegmentMask* segmentMask = GetSegmentMask();
 
     //segmentMask->Write<unsigned char>("resultingMask.png", ForegroundPixelValueWrapper<unsigned char>(0),
     //              BackgroundPixelValueWrapper<unsigned char>(255));
 
-    ImageType::Pointer result = ImageType::New();
-    ITKHelpers::DeepCopy(this->Image, result.GetPointer());
-    ImageType::PixelType backgroundColor(3);
+    typename TImage::Pointer result = TImage::New();
+    ITKHelpers::DeepCopy(this->Image.GetPointer(), result.GetPointer());
+    typename TImage::PixelType backgroundColor(3);
     backgroundColor.Fill(0);
     segmentMask->ApplyToImage(result.GetPointer(), backgroundColor);
     return result;

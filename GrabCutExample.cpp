@@ -19,9 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "GrabCut.h"
 
 // Submodules
-#include "Mask/ITKHelpers/Helpers/Helpers.h"
 #include "Mask/ITKHelpers/ITKHelpers.h"
-#include "Mask/StrokeMask.h"
 
 // ITK
 #include "itkImage.h"
@@ -29,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "itkImageFileWriter.h"
 #include "itkImageRegionConstIteratorWithIndex.h"
 #include "itkVectorImage.h"
-
 
 int main(int argc, char*argv[])
 {
@@ -71,12 +68,12 @@ int main(int argc, char*argv[])
   std::cout << "Starting GrabCut..." << std::endl;
   GrabCut<ImageType> grabCut;
   grabCut.SetImage(reader->GetOutput());
-  grabCut.SetMask(mask);
+  grabCut.SetInitialMask(mask);
   grabCut.PerformSegmentation();
 
   // Get and write the result
 
-
+  ImageType::Pointer result = grabCut.GetResultingForegroundImage();
   ITKHelpers::WriteImage(result.GetPointer(), outputFilename);
 
 }
