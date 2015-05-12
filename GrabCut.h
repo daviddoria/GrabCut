@@ -31,12 +31,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Eigen
 #include <Eigen/Dense>
 
+#include "ExpectationMaximization/MixtureModel.h"
+
 /** Perform GrabCut segmentation on an image.  */
 template <typename TImage>
 class GrabCut
 {
 public:
 
+    // Typedefs
+    typedef typename TImage::PixelType PixelType;
+
+    /** Constructor */
     GrabCut();
 
     /** The type of a list of pixels/indexes. */
@@ -63,14 +69,18 @@ public:
     /** Get the resulting segmented image (the foreground pixels, with background pixels zeroed). */
     TImage* GetSegmentedImage();
 
+    float ForegroundLikelihood(const typename TImage::PixelType& pixel);
+
+    float BackgroundLikelihood(const typename TImage::PixelType& pixel);
+
 protected:
 
-    // Typedefs
-    typedef typename TImage::PixelType PixelType;
+
+    void InitializeModels(const unsigned int numberOfModels);
 
     // Functions
     Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels);
-    void ClusterPixels(const std::vector<itk::Index<2> >& pixels);
+    void ClusterPixels(const std::vector<itk::Index<2> >& pixels, const std::vector<Model*>& models);
     void InitialClustering();
 
     // Data
@@ -86,6 +96,8 @@ protected:
     /** The image to be segmented. */
     typename TImage::Pointer Image;
 
+    MixtureModel ForegroundModels;
+    MixtureModel BackgroundModels;
 };
 
 #include "GrabCut.hpp"

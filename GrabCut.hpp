@@ -43,6 +43,11 @@ GrabCut<TImage>::GrabCut()
 {
     this->Image = TImage::New();
     this->InitialMask = ForegroundBackgroundSegmentMask::New();
+
+    this->GraphCut.ForegroundLikelihood =
+            boost::bind(
+                &GrabCut::
+                ForegroundLikelihood, this, _1);
 }
 
 template <typename TImage>
@@ -80,22 +85,32 @@ Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<itk::I
     return data;
 }
 
+template <typename TImage>
+void GrabCut<TImage>::InitializeModels(const unsigned int numberOfModels)
+{
+    unsigned int dimensionality = 3;
+
+    // Initialize the foreground and background mixture models
+    this->ForegroundModels.resize(numberOfModels);
+    this->BackgroundModels.resize(numberOfModels);
+
+    for(unsigned int i = 0; i < numberOfModels; i++)
+    {
+      Model* foregroundModel = new GaussianModel(dimensionality);
+      this->ForegroundModels[i] = foregroundModel;
+
+      Model* backgroundModel = new GaussianModel(dimensionality);
+      this->BackgroundModels[i] = backgroundModel;
+    }
+}
 
 template <typename TImage>
-void GrabCut<TImage>::ClusterPixels(const std::vector<itk::Index<2> >& pixels)
+void GrabCut<TImage>::ClusterPixels(const std::vector<itk::Index<2> >& pixels, const std::vector<Model*>& models)
 {
     int dimensionality = 3; // RGB
 
     Eigen::MatrixXd data = CreateMatrixFromPixels(pixels);
 
-    // Initialize the model
-    std::vector<Model*> models(5); // The GrabCut paper suggests 5 Gaussian clusters
-
-    for(unsigned int i = 0; i < models.size(); i++)
-    {
-      Model* model = new GaussianModel(dimensionality);
-      models[i] = model;
-    }
 
     ExpectationMaximization expectationMaximization;
     expectationMaximization.SetData(data);
@@ -174,5 +189,24 @@ TImage* GrabCut<TImage>::GetSegmentedImage()
     return result;
 }
 
+template <typename TImage>
+float GrabCut<TImage>::ForegroundLikelihood(const typename TImage::PixelType& pixel)
+{
+    Eigen::VectorXd p(3);
+    p(0) = pixel[0];
+    p(1) = pixel[1];
+    p(2) = pixel[2];
+    return this->ForegroundModels.WeightedEvaluate(p);
+}
+
+template <typename TImage>
+float GrabCut<TImage>::BackgroundLikelihood(const typename TImage::PixelType& pixel)
+{
+    Eigen::VectorXd p(3);
+    p(0) = pixel[0];
+    p(1) = pixel[1];
+    p(2) = pixel[2];
+    return this->BackgroundModels.WeightedEvaluate(p);
+}
 
 #endif
