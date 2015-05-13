@@ -43,44 +43,43 @@ GrabCut<TImage>::GrabCut()
 {
     this->Image = TImage::New();
     this->InitialMask = ForegroundBackgroundSegmentMask::New();
+    this->SegmentationMask = ForegroundBackgroundSegmentMask::New();
 
-    this->GraphCut.ForegroundLikelihood =
-            boost::bind(
+    this->GraphCut.SetForegroundLikelihoodFunction(boost::bind(
                 &GrabCut::
-                ForegroundLikelihood, this, _1);
+                ForegroundLikelihood, this, _1));
 
-    this->GraphCut.BackgroundLikelihood =
-            boost::bind(
+    this->GraphCut.SetBackgroundLikelihoodFunction(boost::bind(
                 &GrabCut::
-                BackgroundLikelihood, this, _1);
+                BackgroundLikelihood, this, _1));
 }
 
 template <typename TImage>
 void GrabCut<TImage>::SetImage(TImage* const image)
 {
     ITKHelpers::DeepCopy(image, this->Image.GetPointer());
+    GraphCut.SetImage(this->Image);
 }
-
 
 template <typename TImage>
 void GrabCut<TImage>::SetInitialMask(ForegroundBackgroundSegmentMask* const mask)
 {
-    this->Image = TImage::New();
+    // Save the initial mask
     ITKHelpers::DeepCopy(mask, this->InitialMask.GetPointer());
+
+    // Initialize the segmentation mask from the initial mask
+    ITKHelpers::DeepCopy(mask, this->SegmentationMask.GetPointer());
 }
 
 template <typename TImage>
 Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<typename TImage::PixelType>& pixels)
 {
-    //std::vector<typename TImage::PixelType> pixelValues = ITKHelpers::GetPixelValues(this->Image, indices);
-
-    // Create the data matrix from the foreground and background pixels
     Eigen::MatrixXd data(3, pixels.size());
 
     for(unsigned int i = 0; i < pixels.size(); i++)
     {
         Eigen::VectorXd v(3);
-        PixelType p = this->Image->GetPixel(pixels[i]);
+        PixelType p = pixels[i];
         for(unsigned int d = 0; d < 3; ++d)
         {
             v(d) = p[d];
@@ -98,26 +97,28 @@ void GrabCut<TImage>::InitializeModels(const unsigned int numberOfModels)
     unsigned int dimensionality = 3;
 
     // Initialize the foreground and background mixture models
-    this->ForegroundModels.resize(numberOfModels);
-    this->BackgroundModels.resize(numberOfModels);
+    std::vector<Model*> foregroundModels;
+    std::vector<Model*> backgroundModels;
+    foregroundModels.resize(numberOfModels);
+    backgroundModels.resize(numberOfModels);
 
     for(unsigned int i = 0; i < numberOfModels; i++)
     {
       Model* foregroundModel = new GaussianModel(dimensionality);
-      this->ForegroundModels[i] = foregroundModel;
+      foregroundModels[i] = foregroundModel;
 
       Model* backgroundModel = new GaussianModel(dimensionality);
-      this->BackgroundModels[i] = backgroundModel;
+      backgroundModels[i] = backgroundModel;
     }
+
+    this->ForegroundModels.SetModels(foregroundModels);
+    this->BackgroundModels.SetModels(backgroundModels);
 }
 
 template <typename TImage>
-void GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::PixelType>& pixels, const MixtureModel& mixtureModel)
+MixtureModel GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::PixelType>& pixels, const MixtureModel& mixtureModel)
 {
-    int dimensionality = 3; // RGB
-
     Eigen::MatrixXd data = CreateMatrixFromPixels(pixels);
-
 
     ExpectationMaximization expectationMaximization;
     expectationMaximization.SetData(data);
@@ -126,49 +127,68 @@ void GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::PixelType
     expectationMaximization.SetMaxIterations(100);
     expectationMaximization.Compute();
 
+    MixtureModel finalModel = expectationMaximization.GetMixtureModel();
+
+    return finalModel;
 }
 
 template <typename TImage>
-void GrabCut<TImage>::InitialClustering()
+void GrabCut<TImage>::ClusterForegroundAndBackground()
 {
     // Foreground
-    std::vector<itk::Index<2> > foregroundPixels =
-        ITKHelpers::GetPixelsWithValue(this->InitialMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::FOREGROUND);
+    std::vector<itk::Index<2> > foregroundPixelIndices =
+        ITKHelpers::GetPixelsWithValue(this->SegmentationMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::FOREGROUND);
 
-    ClusterPixels(foregroundPixels);
+    std::vector<typename TImage::PixelType> foregroundPixels = ITKHelpers::GetPixelValues(this->Image.GetPointer(), foregroundPixelIndices);
+
+    this->ForegroundModels = ClusterPixels(foregroundPixels, this->ForegroundModels);
 
     // Background
-    std::vector<itk::Index<2> > backgroundPixels =
-        ITKHelpers::GetPixelsWithValue(this->InitialMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::BACKGROUND);
+    std::vector<itk::Index<2> > backgroundPixelIndices =
+        ITKHelpers::GetPixelsWithValue(this->SegmentationMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::BACKGROUND);
 
-    ClusterPixels(backgroundPixels);
+    std::vector<typename TImage::PixelType> backgroundPixels = ITKHelpers::GetPixelValues(this->Image.GetPointer(), backgroundPixelIndices);
+
+    this->BackgroundModels = ClusterPixels(backgroundPixels, this->BackgroundModels);
 }
 
 template <typename TImage>
 void GrabCut<TImage>::PerformSegmentation()
 {
+  InitializeModels(5); // The GrabCut paper suggests using 5 models per mixture model
 
-    GraphCut.SetImage(this->Image);
+  unsigned int iteration = 0;
 
-    // Blank the output image
-//    ITKHelpers::SetImageToConstant(this->ResultingSegments.GetPointer(),
-//                                 ForegroundBackgroundSegmentMaskPixelTypeEnum::BACKGROUND);
+  while(iteration < 10)
+  {
+      std::cout << "Iteration " << iteration << "..." << std::endl;
+      PerformIteration();
+      iteration++;
+  }
 
 }
 
 template <typename TImage>
 void GrabCut<TImage>::PerformIteration()
 {
+    ClusterForegroundAndBackground();
 
+    // The originally specified background pixels are the only ones that are definitely background (unless there is interactive refining performed)
+    std::vector<itk::Index<2> > backgroundPixels =
+        ITKHelpers::GetPixelsWithValue(this->InitialMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::BACKGROUND);
+
+    // Perform the graph cut
+    this->GraphCut.SetSinks(backgroundPixels);
+    this->GraphCut.PerformSegmentation();
+
+    ITKHelpers::DeepCopy(this->GraphCut.GetSegmentMask(), this->SegmentationMask.GetPointer());
 }
-
 
 template <typename TImage>
 ForegroundBackgroundSegmentMask* GrabCut<TImage>::GetSegmentationMask()
 {
     return this->Segmentationmask;
 }
-
 
 template <typename TImage>
 TImage* GrabCut<TImage>::GetImage()
@@ -179,10 +199,6 @@ TImage* GrabCut<TImage>::GetImage()
 template <typename TImage>
 TImage* GrabCut<TImage>::GetSegmentedImage()
 {
-
-    //segmentMask->Write<unsigned char>("resultingMask.png", ForegroundPixelValueWrapper<unsigned char>(0),
-    //              BackgroundPixelValueWrapper<unsigned char>(255));
-
     typename TImage::Pointer result = TImage::New();
     ITKHelpers::DeepCopy(this->Image.GetPointer(), result.GetPointer());
     typename TImage::PixelType backgroundColor(3);

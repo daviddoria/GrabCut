@@ -72,8 +72,8 @@ int main(int argc, char*argv[])
   grabCut.PerformSegmentation();
 
   // Get and write the result
-
   ImageType::Pointer result = grabCut.GetSegmentedImage();
   ITKHelpers::WriteImage(result.GetPointer(), outputFilename);
 
+  return 0;
 }
