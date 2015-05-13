@@ -69,18 +69,24 @@ public:
     /** Get the resulting segmented image (the foreground pixels, with background pixels zeroed). */
     TImage* GetSegmentedImage();
 
+    /** Compute the likelihood that a pixel belongs to the foreground mixture model. */
     float ForegroundLikelihood(const typename TImage::PixelType& pixel);
 
+    /** Compute the likelihood that a pixel belongs to the background mixture model. */
     float BackgroundLikelihood(const typename TImage::PixelType& pixel);
 
 protected:
 
-
+    /** Create random models and add them to the mixture models.*/
     void InitializeModels(const unsigned int numberOfModels);
 
-    // Functions
-    Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels);
-    void ClusterPixels(const std::vector<itk::Index<2> >& pixels, const std::vector<Model*>& models);
+    /** Construct a data matrix from a selection of pixel indices. */
+    Eigen::MatrixXd CreateMatrixFromPixels(const std::vector<typename TImage::PixelType>& pixels);
+
+    /** Perform EM on a collection of pixels according to a mixture model. */
+    void ClusterPixels(const std::vector<typename TImage::PixelType>& pixels, const MixtureModel& mixtureModel);
+
+    /** */
     void InitialClustering();
 
     // Data

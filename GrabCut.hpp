@@ -48,6 +48,11 @@ GrabCut<TImage>::GrabCut()
             boost::bind(
                 &GrabCut::
                 ForegroundLikelihood, this, _1);
+
+    this->GraphCut.BackgroundLikelihood =
+            boost::bind(
+                &GrabCut::
+                BackgroundLikelihood, this, _1);
 }
 
 template <typename TImage>
@@ -65,8 +70,10 @@ void GrabCut<TImage>::SetInitialMask(ForegroundBackgroundSegmentMask* const mask
 }
 
 template <typename TImage>
-Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<itk::Index<2> >& pixels)
+Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<typename TImage::PixelType>& pixels)
 {
+    //std::vector<typename TImage::PixelType> pixelValues = ITKHelpers::GetPixelValues(this->Image, indices);
+
     // Create the data matrix from the foreground and background pixels
     Eigen::MatrixXd data(3, pixels.size());
 
@@ -105,7 +112,7 @@ void GrabCut<TImage>::InitializeModels(const unsigned int numberOfModels)
 }
 
 template <typename TImage>
-void GrabCut<TImage>::ClusterPixels(const std::vector<itk::Index<2> >& pixels, const std::vector<Model*>& models)
+void GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::PixelType>& pixels, const MixtureModel& mixtureModel)
 {
     int dimensionality = 3; // RGB
 
@@ -114,16 +121,11 @@ void GrabCut<TImage>::ClusterPixels(const std::vector<itk::Index<2> >& pixels, c
 
     ExpectationMaximization expectationMaximization;
     expectationMaximization.SetData(data);
-    expectationMaximization.SetModels(models);
+    expectationMaximization.SetMixtureModel(mixtureModel);
     expectationMaximization.SetMinChange(1e-5);
     expectationMaximization.SetMaxIterations(100);
     expectationMaximization.Compute();
 
-    std::cout << "Final models:" << std::endl;
-    for(unsigned int i = 0; i < expectationMaximization.GetNumberOfModels(); ++i)
-    {
-      expectationMaximization.GetModel(i)->Print();
-    }
 }
 
 template <typename TImage>
