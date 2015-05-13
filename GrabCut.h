@@ -38,7 +38,6 @@ template <typename TImage>
 class GrabCut
 {
 public:
-
     // Typedefs
     typedef typename TImage::PixelType PixelType;
 

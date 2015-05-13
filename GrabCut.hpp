@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "GrabCut.h"
 
 // Submodules
-#include "Mask/ITKHelpers/Helpers/Helpers.h"
-#include "Mask/ITKHelpers/ITKHelpers.h"
+#include "Helpers/Helpers.h"
+#include "ITKHelpers/ITKHelpers.h"
 
 #include "ExpectationMaximization/ExpectationMaximization.h"
 #include "ExpectationMaximization/GaussianModel.h"
@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // STL
 #include <cmath>
+#include <sstream>
 
 // Boost
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
@@ -161,8 +162,15 @@ void GrabCut<TImage>::PerformSegmentation()
 
   while(iteration < 10)
   {
-      std::cout << "Iteration " << iteration << "..." << std::endl;
+      std::cout << "GrabCut iteration " << iteration << "..." << std::endl;
       PerformIteration();
+
+      // Get and write the result
+      std::stringstream ssOutput;
+      ssOutput << "result_" << iteration << ".png";
+      typename TImage::Pointer result = this->GetSegmentedImage();
+      ITKHelpers::WriteImage(result.GetPointer(), ssOutput.str());
+
       iteration++;
   }
 
@@ -214,7 +222,14 @@ float GrabCut<TImage>::ForegroundLikelihood(const typename TImage::PixelType& pi
     p(0) = pixel[0];
     p(1) = pixel[1];
     p(2) = pixel[2];
-    return this->ForegroundModels.WeightedEvaluate(p);
+
+    float likelihood = this->ForegroundModels.WeightedEvaluate(p);
+    if(Helpers::IsNaN(likelihood))
+    {
+        std::cout << "nan" << std::endl;
+        float test = this->ForegroundModels.WeightedEvaluate(p);
+    }
+    return likelihood;
 }
 
 template <typename TImage>
@@ -224,7 +239,15 @@ float GrabCut<TImage>::BackgroundLikelihood(const typename TImage::PixelType& pi
     p(0) = pixel[0];
     p(1) = pixel[1];
     p(2) = pixel[2];
-    return this->BackgroundModels.WeightedEvaluate(p);
+
+    float likelihood = this->BackgroundModels.WeightedEvaluate(p);
+    if(Helpers::IsNaN(likelihood))
+    {
+        std::cout << "nan" << std::endl;
+        float test = this->BackgroundModels.WeightedEvaluate(p);
+    }
+
+    return likelihood;
 }
 
 #endif
