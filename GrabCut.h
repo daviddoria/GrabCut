@@ -71,6 +71,12 @@ public:
     /** Compute the likelihood that a pixel belongs to the background mixture model. */
     float BackgroundLikelihood(const typename TImage::PixelType& pixel);
 
+    /** Specify how many EM iterations to run during each GrabCut iteration. */
+    void SetNumberOfEMIterations(const unsigned int numberOfEMIterations)
+    {
+        this->NumberOfEMIterations = numberOfEMIterations;
+    }
+
 protected:
 
     /** Create random models and add them to the mixture models.*/
@@ -102,6 +108,18 @@ protected:
 
     /** The mixture model for the background. */
     MixtureModel BackgroundModels;
+
+    /** The number of EM iterations to run for each GrabCut iteration. */
+    unsigned int NumberOfEMIterations = 5;
+
+    unsigned int GetDimensionality()
+    {
+        if(this->Image)
+        {
+            return TImage::PixelType::Dimension;
+        }
+        return 0;
+    }
 };
 
 #include "GrabCut.hpp"

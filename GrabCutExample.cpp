@@ -31,10 +31,10 @@ int main(int argc, char*argv[])
 {
   // Verify arguments
   if(argc != 4)
-    {
+  {
     std::cerr << "Required: image.png mask.fgmask output.png" << std::endl;
     return EXIT_FAILURE;
-    }
+  }
 
   // Parse arguments
   std::string imageFilename = argv[1];

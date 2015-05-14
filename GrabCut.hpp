@@ -66,13 +66,14 @@ void GrabCut<TImage>::SetInitialMask(ForegroundBackgroundSegmentMask* const mask
 template <typename TImage>
 Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<typename TImage::PixelType>& pixels)
 {
-    Eigen::MatrixXd data(3, pixels.size());
+    unsigned int dimensionality = this->GetDimensionality();
+    Eigen::MatrixXd data(dimensionality, pixels.size());
 
     for(unsigned int i = 0; i < pixels.size(); i++)
     {
-        Eigen::VectorXd v(3);
+        Eigen::VectorXd v(dimensionality);
         PixelType p = pixels[i];
-        for(unsigned int d = 0; d < 3; ++d)
+        for(unsigned int d = 0; d < dimensionality; ++d)
         {
             v(d) = p[d];
         }
@@ -86,7 +87,7 @@ Eigen::MatrixXd GrabCut<TImage>::CreateMatrixFromPixels(const std::vector<typena
 template <typename TImage>
 void GrabCut<TImage>::InitializeModels(const unsigned int numberOfModels)
 {
-    unsigned int dimensionality = 3;
+    unsigned int dimensionality = this->GetDimensionality();
 
     // Initialize the foreground and background mixture models
     std::vector<Model*> foregroundModels;
@@ -115,8 +116,8 @@ MixtureModel GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::P
     ExpectationMaximization expectationMaximization;
     expectationMaximization.SetData(data);
     expectationMaximization.SetMixtureModel(mixtureModel);
-    expectationMaximization.SetMinChange(1e-4);
-    expectationMaximization.SetMaxIterations(10);
+    expectationMaximization.SetMinChange(1e-4); // Stop early if the model is doing well
+    expectationMaximization.SetMaxIterations(this->NumberOfEMIterations);
     expectationMaximization.Compute();
 
     MixtureModel finalModel = expectationMaximization.GetMixtureModel();
@@ -211,7 +212,7 @@ template <typename TImage>
 void GrabCut<TImage>::GetSegmentedImage(TImage* result)
 {
     ITKHelpers::DeepCopy(this->Image.GetPointer(), result);
-    typename TImage::PixelType backgroundColor(3);
+    typename TImage::PixelType backgroundColor(this->GetDimensionality());
     backgroundColor.Fill(0);
     this->SegmentationMask->ApplyToImage(result, backgroundColor);
 }
@@ -219,34 +220,25 @@ void GrabCut<TImage>::GetSegmentedImage(TImage* result)
 template <typename TImage>
 float GrabCut<TImage>::ForegroundLikelihood(const typename TImage::PixelType& pixel)
 {
-    Eigen::VectorXd p(3);
+    Eigen::VectorXd p(this->GetDimensionality());
     p(0) = pixel[0];
     p(1) = pixel[1];
     p(2) = pixel[2];
 
     float likelihood = this->ForegroundModels.WeightedEvaluate(p);
-    if(Helpers::IsNaN(likelihood))
-    {
-        std::cout << "nan" << std::endl;
-        float test = this->ForegroundModels.WeightedEvaluate(p);
-    }
+
     return likelihood;
 }
 
 template <typename TImage>
 float GrabCut<TImage>::BackgroundLikelihood(const typename TImage::PixelType& pixel)
 {
-    Eigen::VectorXd p(3);
+    Eigen::VectorXd p(this->GetDimensionality());
     p(0) = pixel[0];
     p(1) = pixel[1];
     p(2) = pixel[2];
 
     float likelihood = this->BackgroundModels.WeightedEvaluate(p);
-    if(Helpers::IsNaN(likelihood))
-    {
-        std::cout << "nan" << std::endl;
-        float test = this->BackgroundModels.WeightedEvaluate(p);
-    }
 
     return likelihood;
 }
