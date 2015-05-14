@@ -45,21 +45,12 @@ GrabCut<TImage>::GrabCut()
     this->Image = TImage::New();
     this->InitialMask = ForegroundBackgroundSegmentMask::New();
     this->SegmentationMask = ForegroundBackgroundSegmentMask::New();
-
-    this->GraphCut.SetForegroundLikelihoodFunction(boost::bind(
-                &GrabCut::
-                ForegroundLikelihood, this, _1));
-
-    this->GraphCut.SetBackgroundLikelihoodFunction(boost::bind(
-                &GrabCut::
-                BackgroundLikelihood, this, _1));
 }
 
 template <typename TImage>
 void GrabCut<TImage>::SetImage(TImage* const image)
 {
     ITKHelpers::DeepCopy(image, this->Image.GetPointer());
-    GraphCut.SetImage(this->Image);
 }
 
 template <typename TImage>
@@ -124,8 +115,8 @@ MixtureModel GrabCut<TImage>::ClusterPixels(const std::vector<typename TImage::P
     ExpectationMaximization expectationMaximization;
     expectationMaximization.SetData(data);
     expectationMaximization.SetMixtureModel(mixtureModel);
-    expectationMaximization.SetMinChange(1e-5);
-    expectationMaximization.SetMaxIterations(100);
+    expectationMaximization.SetMinChange(1e-4);
+    expectationMaximization.SetMaxIterations(10);
     expectationMaximization.Compute();
 
     MixtureModel finalModel = expectationMaximization.GetMixtureModel();
@@ -142,6 +133,7 @@ void GrabCut<TImage>::ClusterForegroundAndBackground()
 
     std::vector<typename TImage::PixelType> foregroundPixels = ITKHelpers::GetPixelValues(this->Image.GetPointer(), foregroundPixelIndices);
 
+    std::cout << "Starting foreground EM..." << std::endl;
     this->ForegroundModels = ClusterPixels(foregroundPixels, this->ForegroundModels);
 
     // Background
@@ -150,6 +142,7 @@ void GrabCut<TImage>::ClusterForegroundAndBackground()
 
     std::vector<typename TImage::PixelType> backgroundPixels = ITKHelpers::GetPixelValues(this->Image.GetPointer(), backgroundPixelIndices);
 
+    std::cout << "Starting background EM..." << std::endl;
     this->BackgroundModels = ClusterPixels(backgroundPixels, this->BackgroundModels);
 }
 
@@ -168,7 +161,8 @@ void GrabCut<TImage>::PerformSegmentation()
       // Get and write the result
       std::stringstream ssOutput;
       ssOutput << "result_" << iteration << ".png";
-      typename TImage::Pointer result = this->GetSegmentedImage();
+      typename TImage::Pointer result = TImage::New();
+      this->GetSegmentedImage(result);
       ITKHelpers::WriteImage(result.GetPointer(), ssOutput.str());
 
       iteration++;
@@ -186,10 +180,19 @@ void GrabCut<TImage>::PerformIteration()
         ITKHelpers::GetPixelsWithValue(this->InitialMask.GetPointer(), ForegroundBackgroundSegmentMaskPixelTypeEnum::BACKGROUND);
 
     // Perform the graph cut
-    this->GraphCut.SetSinks(backgroundPixels);
-    this->GraphCut.PerformSegmentation();
+    ImageGraphCut<TImage> graphCut;
+    graphCut.SetImage(this->Image);
+    graphCut.SetForegroundLikelihoodFunction(boost::bind(
+                &GrabCut::
+                ForegroundLikelihood, this, _1));
 
-    ITKHelpers::DeepCopy(this->GraphCut.GetSegmentMask(), this->SegmentationMask.GetPointer());
+    graphCut.SetBackgroundLikelihoodFunction(boost::bind(
+                &GrabCut::
+                BackgroundLikelihood, this, _1));
+    graphCut.SetSinks(backgroundPixels);
+    graphCut.PerformSegmentation();
+
+    ITKHelpers::DeepCopy(graphCut.GetSegmentMask(), this->SegmentationMask.GetPointer());
 }
 
 template <typename TImage>
@@ -205,14 +208,12 @@ TImage* GrabCut<TImage>::GetImage()
 }
 
 template <typename TImage>
-TImage* GrabCut<TImage>::GetSegmentedImage()
+void GrabCut<TImage>::GetSegmentedImage(TImage* result)
 {
-    typename TImage::Pointer result = TImage::New();
-    ITKHelpers::DeepCopy(this->Image.GetPointer(), result.GetPointer());
+    ITKHelpers::DeepCopy(this->Image.GetPointer(), result);
     typename TImage::PixelType backgroundColor(3);
     backgroundColor.Fill(0);
-    this->SegmentationMask->ApplyToImage(result.GetPointer(), backgroundColor);
-    return result;
+    this->SegmentationMask->ApplyToImage(result, backgroundColor);
 }
 
 template <typename TImage>

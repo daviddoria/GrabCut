@@ -63,7 +63,7 @@ public:
     ForegroundBackgroundSegmentMask* GetSegmentationMask();
 
     /** Get the resulting segmented image (the foreground pixels, with background pixels zeroed). */
-    TImage* GetSegmentedImage();
+    void GetSegmentedImage(TImage* result);
 
     /** Compute the likelihood that a pixel belongs to the foreground mixture model. */
     float ForegroundLikelihood(const typename TImage::PixelType& pixel);
@@ -87,10 +87,6 @@ protected:
 
     /** Do one iteration of the GrabCut algorithm. */
     void PerformIteration();
-
-    // Data
-    /** The object that will do the segmentation at each iteration. */
-    ImageGraphCut<TImage> GraphCut;
 
     /** The segmentation mask. */
     ForegroundBackgroundSegmentMask::Pointer SegmentationMask;
